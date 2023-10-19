@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const https = require('https');
+const fs = require('fs');
+
 const app = express();
-const port = 5000;
+const port = 443; // Le port HTTPS standard
 
 app.use(cors());
 
@@ -16,7 +19,7 @@ function btoa(str) {
 }
 
 // CreateFormToken function
-const createFormToken = async paymentConf => {
+const createFormToken = async (paymentConf) => {
   const username = '51162627';
   const password = 'testpassword_jmwQAY6pjeEcY7xQ1U9lm8xSFaniynic3chkbJ47UCcZs';
   const endpoint = 'api.systempay.fr'; // Without https
@@ -24,7 +27,6 @@ const createFormToken = async paymentConf => {
   const createPaymentEndpoint = `https://${username}:${password}@${endpoint}/api-payment/V4/Charge/CreatePayment`;
 
   try {
-
     const response = await axios.post(createPaymentEndpoint, paymentConf, {
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +36,7 @@ const createFormToken = async paymentConf => {
 
     const responseData = response.data;
 
-    console.log(responseData)
+    console.log(responseData);
 
     if (!responseData?.answer?.formToken) {
       throw responseData;
@@ -64,7 +66,15 @@ app.post('/createPayment', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is listening at http://localhost:${port}`);
+// Charger les certificats SSL
+const privateKey = fs.readFileSync('/etc/ssl/private/ssl-cert-snakeoil.key', 'utf8');
+const certificate = fs.readFileSync('/etc/ssl/certs/ssl-cert-snakeoil.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+
+// Créez un serveur HTTPS
+const httpsServer = https.createServer(credentials, app);
+
+// Écoutez sur le port HTTPS (443)
+httpsServer.listen(port, () => {
+  console.log(`Server is listening at https://localhost`);
 });
