@@ -3,6 +3,8 @@ const cors = require('cors');
 const axios = require('axios');
 const app = express();
 const port = 1604;
+const https = require('https');
+const fs = require('fs');
 
 app.use(cors());
 
@@ -14,6 +16,13 @@ app.use(express.json());
 function btoa(str) {
   return Buffer.from(str, 'binary').toString('base64');
 }
+
+const options = {
+  key: fs.readFileSync('/etc/letsencrypt/live/api.maillotsoraya-conception.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/api.maillotsoraya-conception.com/fullchain.pem')
+};
+
+const httpsServer = https.createServer(options, app);
 
 // CreateFormToken function
 const createFormToken = async paymentConf => {
@@ -65,6 +74,6 @@ app.post('/createPayment', async (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Server is listening at http://localhost:${port}`);
+httpsServer.listen(port, () => {
+  console.log(`Server is listening at https://api.maillotsoraya-conception.com:${port}`);
 });
