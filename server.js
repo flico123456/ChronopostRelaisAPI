@@ -4,12 +4,23 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const xml2js = require('xml2js');
+const https = require('https');
+const fs = require('fs');
 
 const app = express();
 const port = 3001; // Port de votre serveur proxy
 
 // Middleware pour autoriser les requêtes CORS depuis votre domaine
 app.use(cors());
+
+// Options pour la configuration du serveur HTTPS
+const options = {
+  key: fs.readFileSync('/chemin/vers/votre/fichier/privkey.pem'),
+  cert: fs.readFileSync('/chemin/vers/votre/fichier/fullchain.pem')
+};
+
+// Création du serveur HTTPS
+const httpsServer = https.createServer(options, app);
 
 // Endpoint pour faire la requête à l'API Chronopost
 app.get('/api/point-relais', async (req, res) => {
@@ -51,7 +62,7 @@ app.get('/api/point-relais', async (req, res) => {
   }
 });
 
-// Démarrer le serveur
-app.listen(port, () => {
+// Démarrer le serveur HTTPS
+httpsServer.listen(port, () => {
   console.log(`Serveur proxy démarré sur le port ${port}`);
 });
