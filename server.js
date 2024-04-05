@@ -1,79 +1,57 @@
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const app = express();
-const port = 1604;
-const https = require('https');
-const fs = require('fs');
+// api/proxy.js
 
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const xml2js = require('xml2js');
+
+const app = express();
+const port = 3001; // Port de votre serveur proxy
+
+// Middleware pour autoriser les requêtes CORS depuis votre domaine
 app.use(cors());
 
-// Body parser
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// Simulate btoa function for Node.js
-function btoa(str) {
-  return Buffer.from(str, 'binary').toString('base64');
-}
-
-const options = {
-  key: fs.readFileSync('/etc/letsencrypt/live/api.maillotsoraya-conception.com/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/api.maillotsoraya-conception.com/fullchain.pem')
-};
-
-const httpsServer = https.createServer(options, app);
-
-// CreateFormToken function
-const createFormToken = async paymentConf => {
-  const username = '51162627';
-  const password = 'testpassword_jmwQAY6pjeEcY7xQ1U9lm8xSFaniynic3chkbJ47UCcZs';
-  const endpoint = 'api.systempay.fr'; // Without https
-
-  const createPaymentEndpoint = `https://${username}:${password}@${endpoint}/api-payment/V4/Charge/CreatePayment`;
-
+// Endpoint pour faire la requête à l'API Chronopost
+app.get('/api/point-relais', async (req, res) => {
   try {
-
-    const response = await axios.post(createPaymentEndpoint, paymentConf, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Basic ' + btoa(`${username}:${password}`),
-      },
+    const postalCode = req.query.postalCode
+    const response = await axios.get('https://ws.chronopost.fr/recherchebt-ws-cxf/PointRelaisServiceWS/recherchePointChronopostInterParService', {
+      params: {
+        accountNumber: '44546801',
+        password: '210011',
+        zipCode: postalCode,
+        countryCode: 'FR',
+        type: 'P',
+        productCode: '1',
+        service: 'L',
+        weight: '1000',
+        shippingDate: '01/02/2018',
+        maxPointChronopost: '5',
+        maxDistanceSearch: '50',
+        holidayTolerant: '1',
+        language: 'FR'
+      }
     });
 
-    const responseData = response.data;
-
-    console.log(responseData)
-
-    if (!responseData?.answer?.formToken) {
-      throw responseData;
-    }
-
-    return responseData.answer.formToken;
+    // Convertir la réponse XML en JSON
+    const parser = new xml2js.Parser({ explicitArray: false });
+    parser.parseString(response.data, (error, result) => {
+      if (error) {
+        console.error('Erreur lors de la conversion de la réponse XML en JSON:', error);
+        res.status(500).json({ error: 'Erreur lors de la conversion de la réponse XML en JSON' });
+      } else {
+        // Extraire uniquement les données situées dans la balise listePointRelais
+        const listePointRelais = result['soap:Envelope']['soap:Body']['ns1:recherchePointChronopostInterParServiceResponse']['return']['listePointRelais'];
+        res.json(listePointRelais);
+      }
+    });
   } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};
-
-// CreatePayment route
-app.post('/createPayment', async (req, res) => {
-  const paymentConf = req.body.paymentConf;
-
-  try {
-    const formToken = await createFormToken(paymentConf);
-
-    if (formToken) {
-      res.json({ formToken });
-    } else {
-      res.status(500).json({ error: "Aucun formToken reçu de l'API" });
-    }
-  } catch (error) {
-    res.status(500).json({ error: "Une erreur s'est produite lors du traitement de la demande" });
+    console.error('Erreur lors de la récupération des données de l\'API Chronopost:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des données de l\'API Chronopost' });
   }
 });
 
-// Start the server
-httpsServer.listen(port, () => {
-  console.log(`Server is listening at https://api.maillotsoraya-conception.com:${port}`);
+// Démarrer le serveur
+app.listen(port, () => {
+  console.log(`Serveur proxy démarré sur le port ${port}`);
 });
