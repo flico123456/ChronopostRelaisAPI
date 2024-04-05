@@ -15,8 +15,8 @@ app.use(cors());
 
 // Options pour la configuration du serveur HTTPS
 const options = {
-  key: fs.readFileSync('/chemin/vers/votre/fichier/privkey.pem'),
-  cert: fs.readFileSync('/chemin/vers/votre/fichier/fullchain.pem')
+  key: fs.readFileSync('/etc/letsencrypt/live/api.maillotsoraya-conception.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/api.maillotsoraya-conception.com/fullchain.pem')
 };
 
 // Création du serveur HTTPS
