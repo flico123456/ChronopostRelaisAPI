@@ -198,10 +198,7 @@ app.put('/stock_by_depot/update/:depot_id', (req, res) => {
   }
 });
 
-
-
 //////////LOGS//////////
-
 
 // INSERT
 app.post('/logs/create', (req, res) => {
@@ -254,7 +251,6 @@ app.get('/logs/select', (req, res) => {
     res.status(200).json(results);
   });
 });
-
 
 // Démarrer le serveur HTTP
 httpServer.listen(port, () => {
